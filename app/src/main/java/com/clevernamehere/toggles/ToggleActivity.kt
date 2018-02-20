@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.pm.PackageManager
+import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.support.design.widget.Snackbar
 import android.support.v4.app.ActivityCompat
@@ -19,6 +20,7 @@ import android.widget.Switch
 import kotlinx.android.synthetic.main.activity_toggle.*
 
 const val PERMISSIONS_REQUEST_BLUETOOTH = 1
+const val PERMISSIONS_REQUEST_WIFI = 2
 
 class ToggleActivity : AppCompatActivity() {
 
@@ -52,10 +54,14 @@ class ToggleActivity : AppCompatActivity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         when (requestCode) {
             PERMISSIONS_REQUEST_BLUETOOTH -> {
-                // If request is cancelled, the result arrays are empty.
+                // If request is cancelled, the result arrays are empty.\
+                if (grantResults.isEmpty()) {
+                    return
+                }
+
                 var bluetoothResult = grantResults[0] == PackageManager.PERMISSION_GRANTED
                 var bluetoothAdminResult = grantResults[1] == PackageManager.PERMISSION_GRANTED
-                if ((grantResults.isNotEmpty() && bluetoothResult && bluetoothAdminResult)) {
+                if (bluetoothResult && bluetoothAdminResult) {
 
                     // permission was granted, yay! Do the
                     // bluetooth task you need to do.
@@ -73,6 +79,20 @@ class ToggleActivity : AppCompatActivity() {
 
                 }
                 return
+            }
+            PERMISSIONS_REQUEST_WIFI -> {
+                if (grantResults.isEmpty()) {
+                    return
+                }
+                var wifiResult =  grantResults[0] == PackageManager.PERMISSION_GRANTED
+
+                if (wifiResult) {
+                    var wifiMgr = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+
+                    if (wifiMgr != null) {
+                        wifiMgr.setWifiEnabled(true)
+                    }
+                }
             }
 
             // Add other 'when' lines to check for other
@@ -107,5 +127,26 @@ class ToggleActivity : AppCompatActivity() {
             }
         }
         return
+    }
+
+    fun toggleWifi(view: View) {
+        var wifiToggle = findViewById<Switch>(R.id.wifiToggle)
+        var toggled = wifiToggle.isChecked()
+
+        if (toggled) {
+            val permissionCheck = ContextCompat.checkSelfPermission(this, Manifest.permission.CHANGE_WIFI_STATE)
+
+            if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
+                var wifiMgr = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+
+                if (wifiMgr != null) {
+                    wifiMgr.setWifiEnabled(true)
+                }
+            } else {
+                ActivityCompat.requestPermissions(this,
+                        arrayOf(Manifest.permission.CHANGE_WIFI_STATE),
+                        PERMISSIONS_REQUEST_WIFI)
+            }
+        }
     }
 }
