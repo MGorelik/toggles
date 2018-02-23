@@ -4,9 +4,12 @@ import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.hardware.display.DisplayManager
 import android.net.wifi.WifiManager
 import android.os.Bundle
+import android.provider.Settings
 import android.support.design.widget.Snackbar
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
@@ -15,12 +18,15 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.widget.SeekBar
 import android.widget.Switch
 
 import kotlinx.android.synthetic.main.activity_toggle.*
 
 const val PERMISSIONS_REQUEST_BLUETOOTH = 1
 const val PERMISSIONS_REQUEST_WIFI = 2
+const val PERMISSIONS_REQUEST_SETTINGS_AUTO_BR = 3
+const val PERMISSIONS_REQUEST_SETTINGS_BR_LVL = 4
 
 class ToggleActivity : AppCompatActivity() {
 
@@ -104,49 +110,89 @@ class ToggleActivity : AppCompatActivity() {
         }
     }
 
+
     fun toggleBluetooth(view: View) {
         var bluetoothToggle = findViewById<Switch>(R.id.bluetoothToggle)
         var toggled = bluetoothToggle.isChecked()
 
-        if (toggled) {
-            val permissionCheckBluetooth = ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH)
-            val permissionCheckAdmin = ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_ADMIN)
-            // if we have permission, enable it, otherwise ask
-            if (permissionCheckBluetooth == PackageManager.PERMISSION_GRANTED && permissionCheckAdmin == PackageManager.PERMISSION_GRANTED) {
-                var bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+        val permissionCheckBluetooth = ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH)
+        val permissionCheckAdmin = ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_ADMIN)
+        // if we have permission, enable it, otherwise ask
+        if (permissionCheckBluetooth == PackageManager.PERMISSION_GRANTED && permissionCheckAdmin == PackageManager.PERMISSION_GRANTED) {
+            var bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
 
-                // make sure we have an adapter
-                if (bluetoothAdapter != null) {
-                    bluetoothAdapter.enable()
-                }
-            } else {
-                Log.d("ELSE", "Hitting else, requesting perms")
-                ActivityCompat.requestPermissions(this,
-                        arrayOf(Manifest.permission.BLUETOOTH, Manifest.permission.BLUETOOTH_ADMIN),
-                        PERMISSIONS_REQUEST_BLUETOOTH)
+            // make sure we have an adapter
+            if (bluetoothAdapter != null) {
+                if (toggled) bluetoothAdapter.enable() else bluetoothAdapter.disable()
             }
+        } else {
+            ActivityCompat.requestPermissions(this,
+                    arrayOf(Manifest.permission.BLUETOOTH, Manifest.permission.BLUETOOTH_ADMIN),
+                    PERMISSIONS_REQUEST_BLUETOOTH)
         }
-        return
     }
 
     fun toggleWifi(view: View) {
         var wifiToggle = findViewById<Switch>(R.id.wifiToggle)
         var toggled = wifiToggle.isChecked()
 
-        if (toggled) {
-            val permissionCheck = ContextCompat.checkSelfPermission(this, Manifest.permission.CHANGE_WIFI_STATE)
+        val permissionCheck = ContextCompat.checkSelfPermission(this, Manifest.permission.CHANGE_WIFI_STATE)
 
-            if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
-                var wifiMgr = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
+            var wifiMgr = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
 
-                if (wifiMgr != null) {
-                    wifiMgr.setWifiEnabled(true)
-                }
-            } else {
-                ActivityCompat.requestPermissions(this,
-                        arrayOf(Manifest.permission.CHANGE_WIFI_STATE),
-                        PERMISSIONS_REQUEST_WIFI)
+            if (wifiMgr != null) {
+                if (toggled) wifiMgr.setWifiEnabled(true) else wifiMgr.setWifiEnabled(false)
             }
+        } else {
+            ActivityCompat.requestPermissions(this,
+                    arrayOf(Manifest.permission.CHANGE_WIFI_STATE),
+                    PERMISSIONS_REQUEST_WIFI)
+        }
+    }
+
+    fun toggleAutoBrightness(view: View) {
+        var brightnessToggle = findViewById<Switch>(R.id.brightnessToggle)
+        var toggled = brightnessToggle.isChecked()
+
+        var permissionCheck = Settings.System.canWrite(applicationContext)
+
+        if (permissionCheck) {
+            // write the new value to the settings (apparently there's no manager or utility class for this)
+            Settings.System.putInt(applicationContext.contentResolver,
+                    Settings.System.SCREEN_BRIGHTNESS_MODE,
+                    if (toggled) Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC else Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL)
+
+        } else {
+            intent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS)
+            startActivityForResult(intent, PERMISSIONS_REQUEST_SETTINGS_AUTO_BR)
+
+        }
+    }
+
+    fun setBrightnessLevel(view: View) {
+        var brightnessLevel = findViewById<SeekBar>(R.id.brightnessSeekBar)
+        var level = brightnessLevel.progress
+
+        var permissionCheck = Settings.System.canWrite(applicationContext)
+
+        if (permissionCheck) {
+            // write the new value to the settings (apparently there's no manager or utility class for this)
+
+            // turn off auto
+            Settings.System.putInt(applicationContext.contentResolver,
+                    Settings.System.SCREEN_BRIGHTNESS_MODE,
+                    Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL)
+
+            // set the new level
+            Settings.System.putInt(applicationContext.contentResolver,
+                    Settings.System.SCREEN_BRIGHTNESS,
+                    level)
+
+        } else {
+            // send the user to settings to enable writes
+            intent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS)
+            startActivityForResult(intent, PERMISSIONS_REQUEST_SETTINGS_BR_LVL)
         }
     }
 }
