@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.hardware.display.DisplayManager
+import android.media.AudioManager
 import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.provider.Settings
@@ -19,6 +20,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.SeekBar
+import android.widget.Spinner
 import android.widget.Switch
 
 import kotlinx.android.synthetic.main.activity_toggle.*
@@ -193,6 +195,26 @@ class ToggleActivity : AppCompatActivity() {
             // send the user to settings to enable writes
             intent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS)
             startActivityForResult(intent, PERMISSIONS_REQUEST_SETTINGS_BR_LVL)
+        }
+    }
+
+    fun setRingMode(view: View) {
+        var ringMode = findViewById<Spinner>(R.id.ringModeSpinner)
+        var mode = ringMode.selectedItem
+
+        var audioMgr = applicationContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+
+        when (mode) {
+            "Ring" -> {
+                audioMgr.ringerMode = AudioManager.RINGER_MODE_NORMAL
+            }
+            "Vibrate" -> {
+                audioMgr.ringerMode = AudioManager.RINGER_MODE_VIBRATE
+            }
+            // need to handle DND perms?
+//            "Silent" -> {
+//                audioMgr.ringerMode = AudioManager.RINGER_MODE_SILENT
+//            }
         }
     }
 }

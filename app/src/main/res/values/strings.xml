@@ -1,4 +1,10 @@
 <resources>
     <string name="app_name">Toggles</string>
     <string name="action_settings">Settings</string>
+    <string-array
+        name="ring_modes">
+        <item>Ring</item>
+        <item>Vibrate</item>
+        <item>Silent</item>
+    </string-array>
 </resources>
